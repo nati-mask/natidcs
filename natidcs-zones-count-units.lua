@@ -59,12 +59,16 @@ do
         return (prefix or 'Units in zone:')..'\n'..table.concat(typesStringTbl, '\n')
     end
 
-    local function countAndReportUnitsInZone(zoneName)
+    local function countAndReportUnitsInZone(zoneName, always)
         local zoneUnits = mist.getUnitsInZones(mist.makeUnitTable({'[red][vehicle]'}), {zoneName})
         local zoneUnitsTypeCounter = makeUnitsTypeCounter(zoneUnits);
         if not unitsTypeCountersEqual(zoneUnitsTypeCounter, missionUnitTypeCounters[zoneName]) then
             trigger.action.outText(unitsTypeCounterString(zoneUnitsTypeCounter, zoneName..' remaining units:'), 30)
             missionUnitTypeCounters[zoneName] = zoneUnitsTypeCounter;
+        else
+            if always then
+                trigger.action.outText(unitsTypeCounterString(zoneUnitsTypeCounter, zoneName..' remaining units:'), 30)
+            end
         end
     end
 
@@ -98,7 +102,7 @@ do
     local function populateMenuForCountUnitsInZones(zonesByName)
         for zoneName in pairs(zonesByName) do
             missionCommands.addCommand('Units at '..zoneName, nil, function()
-                countAndReportUnitsInZone(zoneName);
+                countAndReportUnitsInZone(zoneName, true);
             end)
         end
     end
