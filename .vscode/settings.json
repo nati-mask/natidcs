@@ -1,0 +1,21 @@
+{
+    "Lua.diagnostics.globals": [
+        "natidcs",
+        "Unit",
+        "world",
+        "Object",
+        "trigger",
+        "env",
+        "country",
+        "coalition",
+        "Group",
+        "Airbase",
+        "land",
+        "StaticObject",
+        "timer",
+        "coord",
+        "atmosphere",
+        "mist"
+    ],
+    "terminal.integrated.defaultProfile.windows": "Git Bash Portable"
+}
