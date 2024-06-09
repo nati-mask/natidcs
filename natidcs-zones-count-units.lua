@@ -63,7 +63,7 @@ do
         local zoneUnits = mist.getUnitsInZones(mist.makeUnitTable({'[red][vehicle]'}), {zoneName})
         local zoneUnitsTypeCounter = makeUnitsTypeCounter(zoneUnits);
         if not unitsTypeCountersEqual(zoneUnitsTypeCounter, missionUnitTypeCounters[zoneName]) then
-            trigger.action.outText(unitsTypeCounterString(zoneUnitsTypeCounter, zoneName..' remaining units:'), 20)
+            trigger.action.outText(unitsTypeCounterString(zoneUnitsTypeCounter, zoneName..' remaining units:'), 30)
             missionUnitTypeCounters[zoneName] = zoneUnitsTypeCounter;
         end
     end
@@ -101,7 +101,7 @@ do
                 if unitsTypeCounterEmpty(missionUnitTypeCounters[zoneName]) then
                     countAndReportUnitsInZone(zoneName);
                 else
-                    trigger.action.outText(unitsTypeCounterString(missionUnitTypeCounters[zoneName], zoneName..' remaining units:'), 20)
+                    trigger.action.outText(unitsTypeCounterString(missionUnitTypeCounters[zoneName], zoneName..' remaining units:'), 30)
                 end
             end)
         end
