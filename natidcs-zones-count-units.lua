@@ -47,20 +47,23 @@ do
     end
 
     local function unitsTypeCounterString(unitTypesCounter, prefix)
-        local typesString = prefix or 'Units in zone:'
-        if unitsTypeCounterEmpty(unitTypesCounter) then return typesString..'\nCongratulations! Zone is clear!' end
-        for type, amount in pairs(unitTypesCounter) do
-            typesString = typesString..'\n'..type..': '..amount
+        local typesStringTbl = {}
+        if unitsTypeCounterEmpty(unitTypesCounter) then
+            table.insert(typesStringTbl, 'Congratulations! Zone is clear!')
+        else
+            for type, amount in pairs(unitTypesCounter) do
+                table.insert(typesStringTbl, type..': '..amount)
+            end
         end
-        return typesString
+        table.sort(typesStringTbl)
+        return (prefix or 'Units in zone:')..'\n'..table.concat(typesStringTbl, '\n')
     end
 
-    local function reportUnitsInZone(zoneName, zoneNameReadable)
-        local readableName = zoneNameReadable or zoneName
+    local function countAndReportUnitsInZone(zoneName)
         local zoneUnits = mist.getUnitsInZones(mist.makeUnitTable({'[red][vehicle]'}), {zoneName})
         local zoneUnitsTypeCounter = makeUnitsTypeCounter(zoneUnits);
         if not unitsTypeCountersEqual(zoneUnitsTypeCounter, missionUnitTypeCounters[zoneName]) then
-            trigger.action.outText(unitsTypeCounterString(zoneUnitsTypeCounter, readableName..' units:'), 20)
+            trigger.action.outText(unitsTypeCounterString(zoneUnitsTypeCounter, zoneName..' remaining units:'), 20)
             missionUnitTypeCounters[zoneName] = zoneUnitsTypeCounter;
         end
     end
@@ -88,7 +91,19 @@ do
 
             local unitZoneName = findZoneForDeadUnit(event.initiator)
             -- trigger.action.outText('Type: '..event.initiator:getTypeName()..' just killed now!'..'\nZone: '..(unitZoneName or 'Unknown'), 10)
-            reportUnitsInZone(unitZoneName);
+            countAndReportUnitsInZone(unitZoneName);
+        end
+    end
+
+    local function populateMenuForCountUnitsInZones(zonesByName)
+        for zoneName in pairs(zonesByName) do
+            missionCommands.addCommand('Units at '..zoneName, nil, function()
+                if unitsTypeCounterEmpty(missionUnitTypeCounters[zoneName]) then
+                    countAndReportUnitsInZone(zoneName);
+                else
+                    trigger.action.outText(unitsTypeCounterString(missionUnitTypeCounters[zoneName], zoneName..' remaining units:'), 20)
+                end
+            end)
         end
     end
 
@@ -104,6 +119,8 @@ do
     end
 
     initUnitCountZones()
+
+    populateMenuForCountUnitsInZones(missionUnitTypeCounters)
 
     natidcs.showUnitCounterAtUnitDead = onUnitDead
 
