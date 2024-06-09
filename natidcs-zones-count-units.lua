@@ -98,11 +98,7 @@ do
     local function populateMenuForCountUnitsInZones(zonesByName)
         for zoneName in pairs(zonesByName) do
             missionCommands.addCommand('Units at '..zoneName, nil, function()
-                if unitsTypeCounterEmpty(missionUnitTypeCounters[zoneName]) then
-                    countAndReportUnitsInZone(zoneName);
-                else
-                    trigger.action.outText(unitsTypeCounterString(missionUnitTypeCounters[zoneName], zoneName..' remaining units:'), 30)
-                end
+                countAndReportUnitsInZone(zoneName);
             end)
         end
     end
