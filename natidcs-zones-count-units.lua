@@ -1,19 +1,19 @@
 --[[
 ## Nati's additions to DCS
 ]]
-natidcs = {}
+natidcs = natidcs or {}
 
 do
     local missionUnitTypeCounters = {}
 
-    local function unitsTypeCounterEmpty(typeCounter)
+    local function isUnitsTypeCounterEmpty(typeCounter)
         for type, amount in pairs(typeCounter) do
             if amount > 0 then return false end
         end
         return true
     end
 
-    local function unitsTypeCountersEqual(typeCounterA, typeCounterB)
+    local function isUnitsTypeCountersEqual(typeCounterA, typeCounterB)
         -- Since I never fount a safe way to count fields without for loop to count,
         -- then double comparison sounds like an efficient idea.
         for type, amount in pairs(typeCounterA) do
@@ -46,12 +46,12 @@ do
         return unitTypes
     end
 
-    local function unitsTypeCounterString(unitTypesCounter, prefix)
+    local function makeUnitsTypeCounterString(typeCounter, prefix)
         local typesStringTbl = {}
-        if unitsTypeCounterEmpty(unitTypesCounter) then
+        if isUnitsTypeCounterEmpty(typeCounter) then
             table.insert(typesStringTbl, 'Congratulations! Zone is clear!')
         else
-            for type, amount in pairs(unitTypesCounter) do
+            for type, amount in pairs(typeCounter) do
                 table.insert(typesStringTbl, type..': '..amount)
             end
         end
@@ -59,22 +59,24 @@ do
         return (prefix or 'Units in zone:')..'\n'..table.concat(typesStringTbl, '\n')
     end
 
-    local function countAndReportUnitsInZone(zoneName, always)
+    local function reportZoneUnitsTypeCounter(zoneName)
+        trigger.action.outText(makeUnitsTypeCounterString(missionUnitTypeCounters[zoneName], zoneName..' remaining units:'), 30)
+    end
+
+    local function updateZoneUnitsCounters(zoneName)
         local zoneUnits = mist.getUnitsInZones(mist.makeUnitTable({'[red][vehicle]'}), {zoneName})
-        local zoneUnitsTypeCounter = makeUnitsTypeCounter(zoneUnits);
-        if not unitsTypeCountersEqual(zoneUnitsTypeCounter, missionUnitTypeCounters[zoneName]) then
-            trigger.action.outText(unitsTypeCounterString(zoneUnitsTypeCounter, zoneName..' remaining units:'), 30)
-            missionUnitTypeCounters[zoneName] = zoneUnitsTypeCounter;
+        local zoneUnitsTypeCounter = makeUnitsTypeCounter(zoneUnits)
+        if isUnitsTypeCountersEqual(zoneUnitsTypeCounter, missionUnitTypeCounters[zoneName]) then
+            return false
         else
-            if always then
-                trigger.action.outText(unitsTypeCounterString(zoneUnitsTypeCounter, zoneName..' remaining units:'), 30)
-            end
+            missionUnitTypeCounters[zoneName] = zoneUnitsTypeCounter
+            return true
         end
     end
 
     local function findZoneForDeadUnit(unit)
         for zoneName in pairs(missionUnitTypeCounters) do
-            local zone = mist.DBs.zonesByName[zoneName];
+            local zone = mist.DBs.zonesByName[zoneName]
             local unitPos = unit:getPosition().p
 
             if ((unitPos.x - zone.point.x)^2 + (unitPos.z - zone.point.z)^2)^0.5 <= zone.radius then
@@ -95,14 +97,17 @@ do
 
             local unitZoneName = findZoneForDeadUnit(event.initiator)
             -- trigger.action.outText('Type: '..event.initiator:getTypeName()..' just killed now!'..'\nZone: '..(unitZoneName or 'Unknown'), 10)
-            countAndReportUnitsInZone(unitZoneName);
+
+            local updated = updateZoneUnitsCounters(unitZoneName)
+            if (updated) then reportZoneUnitsTypeCounter(unitZoneName) end
         end
     end
 
     local function populateMenuForCountUnitsInZones(zonesByName)
         for zoneName in pairs(zonesByName) do
             missionCommands.addCommand('Units at '..zoneName, nil, function()
-                countAndReportUnitsInZone(zoneName, true);
+                updateZoneUnitsCounters(zoneName)
+                reportZoneUnitsTypeCounter(zoneName)
             end)
         end
     end
@@ -126,5 +131,4 @@ do
 
 end
 
--- world.addEventHandler(handler)
 mist.addEventHandler(natidcs.showUnitCounterAtUnitDead)
