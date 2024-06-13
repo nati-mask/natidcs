@@ -8,6 +8,8 @@ Before using these tools make sure that you have an updated version of [MIST](ht
 Loading [MIST](https://github.com/mrSkortch/MissionScriptingTools) into **INITIALIZATION SCRIPT** part (triggers page) is preferable.
 
 ## Zones Units Type Counters
+![Zones Units Type Counters](img/zones-count-units.jpg)
+### How to use
 1. Create one or more zones with the Property `COUNT_UNIT_TYPES`.
 1. Save the file: [natidcs-zones-count-units.lua](https://raw.githubusercontent.com/nati-mask/natidcs/main/natidcs-zones-count-units.lua) and load it as a `ONCE MISSION START`, `DO SCRIPT FILE` trigger.
 1. That's it! The script will count units by types on each zone, and add F10 menu to query the counts.
@@ -16,6 +18,7 @@ Loading [MIST](https://github.com/mrSkortch/MissionScriptingTools) into **INITIA
     mist.addEventHandler(...
     ```
 
+---
 Thank you :)
 
 Nati Mask
