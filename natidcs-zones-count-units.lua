@@ -60,10 +60,12 @@ do
     end
 
     local function reportZoneUnitsTypeCounter(zoneName)
+        if not zoneName then return end
         trigger.action.outText(makeUnitsTypeCounterString(missionUnitTypeCounters[zoneName], zoneName..' remaining units:'), 30)
     end
 
     local function updateZoneUnitsCounters(zoneName)
+        if not zoneName then return false end
         local zoneUnits = mist.getUnitsInZones(mist.makeUnitTable({'[red][vehicle]'}), {zoneName})
         local zoneUnitsTypeCounter = makeUnitsTypeCounter(zoneUnits)
         if isUnitsTypeCountersEqual(zoneUnitsTypeCounter, missionUnitTypeCounters[zoneName]) then
@@ -98,8 +100,10 @@ do
             local unitZoneName = findZoneForDeadUnit(event.initiator)
             -- trigger.action.outText('Type: '..event.initiator:getTypeName()..' just killed now!'..'\nZone: '..(unitZoneName or 'Unknown'), 10)
 
-            local updated = updateZoneUnitsCounters(unitZoneName)
-            if (updated) then reportZoneUnitsTypeCounter(unitZoneName) end
+            if unitZoneName then
+                local updated = updateZoneUnitsCounters(unitZoneName)
+                if updated then reportZoneUnitsTypeCounter(unitZoneName) end
+            end
         end
     end
 
