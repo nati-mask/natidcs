@@ -16,7 +16,8 @@
         "coord",
         "atmosphere",
         "mist",
-        "missionCommands"
+        "missionCommands",
+        "Controller"
     ],
     "terminal.integrated.defaultProfile.windows": "Git Bash Portable"
 }
