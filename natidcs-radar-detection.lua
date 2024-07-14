@@ -7,9 +7,17 @@ do
 
     local function addPollingForUnits(units, func, interval)
 
-        local scheduled = mist.scheduleFunction(function ()
+        local scheduledDetection
 
-            for i = 1, #units do func(units[i]) end
+        scheduledDetection = mist.scheduleFunction(function ()
+
+            for i = 1, #units do
+                local continue = func(units[i])
+                if continue == false then
+                    trigger.action.outText('Stopping detection polling', 30)
+                    mist.removeFunction(scheduledDetection)
+                end
+            end
 
         end, {}, timer.getTime() + 10, interval);
 
@@ -19,19 +27,26 @@ do
 
         addPollingForUnits(detectingUnits, function (detectingUnit)
 
-            -- trigger.action.outText('Checking what '..detectingUnit:getTypeName()..' is detecting, radar enum: '..Controller.Detection.RADAR, 10)
+            trigger.action.outText(
+                'Checking what '..detectingUnit:getTypeName()
+                ..' "'..detectingUnit:getName()..'"'..
+                ' is detecting, radar enum: '..Controller.Detection.RADAR, 10
+            )
 
             local controller = detectingUnit:getController();
 
             local detections = controller:getDetectedTargets(Controller.Detection.RADAR);
 
-            for i = 1, #detections do func(detections[i], detectingUnit) end
+            for i = 1, #detections do
+                local continue = func(detections[i], detectingUnit)
+                if continue == false then return false end
+            end
 
         end, interval)
 
     end
 
-    local function pollIsGroupsRadarDetectedBy(detectingUnitsNames, detectedGroupsNames, interval)
+    local function pollIsGroupsRadarDetectedBy(detectingUnitsNames, detectedGroupsNames, requireType, interval)
 
         if not mist then return end
 
@@ -53,17 +68,32 @@ do
 
             -- trigger.action.outText('The unit detection table is: '..mist.utils.tableShow(unitDetection), 30)
             local detectedUnit = unitDetection.object
-            if (not detectedUnit) then return end
+
+            -- If unit is broken or out somehow, continue
+            if (
+                not detectedUnit or
+                not detectedUnit['getGroup'] or
+                not detectedUnit:isActive() or
+                not detectedUnit:isExist()
+            ) then return end
+
+            local detectedUnitGroup = detectedUnit:getGroup()
+            if not detectedUnitGroup then return end
+            local detectedUnitGroupName = detectedUnitGroup:getName()
+
+            if requireType then
+                if not unitDetection.type then return end
+            end
 
             for i = 1, #detectedGroupsNames do
-                local detectedUnitGroup = detectedUnit:getGroup();
-                if (detectedUnitGroup and detectedUnitGroup:getName() == detectedGroupsNames[i]) then
+                if detectedUnitGroupName == detectedGroupsNames[i] then
                     trigger.action.outText(
-                        'Unit Radar detected! '..detectedUnit:getTypeName()..' ("'..detectedUnit:getName()..'")'..'\n'..
-                        'within in allowed group: '..detectedGroupsNames[i],
+                        'Unit Radar detected! '..
+                        (requireType and '(-- Type is known --) ' or '')..
+                        detectedUnit:getTypeName()..' "'..detectedUnit:getName()..'"',
                         interval
                     )
-                    return false;
+                    return false; -- false is for: stop the polling!
                 end
             end
 
