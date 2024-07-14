@@ -18,12 +18,12 @@ do
 
         scheduledDetection = mist.scheduleFunction(function ()
 
-            trigger.action.outText('Do Polling for '..#units..' units', interval)
+            -- trigger.action.outText('Do Polling for '..#units..' units', interval)
 
             for i = 1, #units do
                 local continue = func(units[i])
                 if continue == false then
-                    trigger.action.outText('Stopping polling for units', 30)
+                    -- trigger.action.outText('Stopping polling for units', 30)
                     mist.removeFunction(scheduledDetection)
                 end
             end
@@ -53,11 +53,11 @@ do
                 return
             end
 
-            trigger.action.outText(
-                'Checking what '..detectingUnit:getTypeName()
-                ..' "'..detectingUnit:getName()..'"'..
-                ' is detecting, radar enum: '..Controller.Detection.RADAR, 10
-            )
+            -- trigger.action.outText(
+            --     'Checking what '..detectingUnit:getTypeName()
+            --     ..' "'..detectingUnit:getName()..'"'..
+            --     ' is detecting, radar enum: '..Controller.Detection.RADAR, 10
+            -- )
 
             local detections = controller:getDetectedTargets(Controller.Detection.RADAR);
 
@@ -70,7 +70,7 @@ do
 
     end
 
-    local function pollIsGroupsRadarDetectedBy(detectingUnitsNames, detectedGroupsNames, requireType, interval)
+    local function pollIsGroupsRadarDetectedBy(detectingUnitsNames, detectedGroupsNames, flagNum, requireType, interval)
 
         if not mist then return end
 
@@ -112,19 +112,16 @@ do
 
             for i = 1, #detectedGroupsNames do
                 if detectedUnitGroupName == detectedGroupsNames[i] then
-                    trigger.action.outText(
-                        'Unit Radar detected! '..
-                        (requireType and '(-- Type is known --) ' or '')..
-                        detectedUnit:getTypeName()..' "'..detectedUnit:getName()..'"',
-                        interval
-                    )
+                    -- trigger.action.outText(
+                    --     'Unit Radar detected! '..
+                    --     (requireType and '(-- Type is known --) ' or '')..
+                    --     detectedUnit:getTypeName()..' "'..detectedUnit:getName()..'"',
+                    --     30
+                    -- )
+                    trigger.action.setUserFlag(flagNum, true)
                     return false; -- false is for: stop the polling!
                 end
             end
-
-            -- local detectedUnit = detection.object;
-
-            -- trigger.action.outText('The detected unit is: '..mist.utils.tableShow(detectedUnit), 30)
 
         end, interval)
 
