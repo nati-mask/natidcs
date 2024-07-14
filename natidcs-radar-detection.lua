@@ -5,16 +5,25 @@ natidcs = natidcs or {}
 
 do
 
+    -- TODO: Util!
+    local function tableLength(T)
+        local count = 0
+        for _ in pairs(T) do count = count + 1 end
+        return count
+    end
+
     local function addPollingForUnits(units, func, interval)
 
         local scheduledDetection
 
         scheduledDetection = mist.scheduleFunction(function ()
 
+            trigger.action.outText('Do Polling for '..#units..' units', interval)
+
             for i = 1, #units do
                 local continue = func(units[i])
                 if continue == false then
-                    trigger.action.outText('Stopping detection polling', 30)
+                    trigger.action.outText('Stopping polling for units', 30)
                     mist.removeFunction(scheduledDetection)
                 end
             end
@@ -25,15 +34,30 @@ do
 
     local function addRadarDetectionPollingForUnits(detectingUnits, func, interval)
 
+        local deadUnits = {}
+
         addPollingForUnits(detectingUnits, function (detectingUnit)
+
+            if (tableLength(deadUnits) == #detectingUnits) then
+                return false -- stop the polling
+            end
+
+            local controller = detectingUnit:getController();
+
+            if (
+                not detectingUnit:isActive() or
+                not detectingUnit:isExist() or
+                not controller
+            ) then
+                deadUnits[detectingUnit:getName()] = true -- "Set" like
+                return
+            end
 
             trigger.action.outText(
                 'Checking what '..detectingUnit:getTypeName()
                 ..' "'..detectingUnit:getName()..'"'..
                 ' is detecting, radar enum: '..Controller.Detection.RADAR, 10
             )
-
-            local controller = detectingUnit:getController();
 
             local detections = controller:getDetectedTargets(Controller.Detection.RADAR);
 
@@ -63,6 +87,7 @@ do
         end
 
         if (not interval) then interval = #detectingUnits * 2 end
+        if (interval < 2) then interval = 2 end
 
         addRadarDetectionPollingForUnits(detectingUnits, function (unitDetection, detectingUnit)
 
