@@ -5,6 +5,8 @@ natidcs = natidcs or {}
 
 do
 
+    local logger = mist.Logger:new("Radar Detection Sctipt (Nati)", "info")
+
     -- TODO: Util!
     local function tableLength(T)
         local count = 0
@@ -24,6 +26,7 @@ do
                 local continue = func(units[i])
                 if continue == false then
                     -- trigger.action.outText('Stopping polling for units', 30)
+                    logger:info('Stopping polling session for units')
                     mist.removeFunction(scheduledDetection)
                 end
             end
@@ -89,6 +92,8 @@ do
         if (not interval) then interval = #detectingUnits * 2 end
         if (interval < 2) then interval = 2 end
 
+        logger:info('Starting Detection in '..interval..'s for '..#detectingUnits..' detecting radar units')
+
         addRadarDetectionPollingForUnits(detectingUnits, function (unitDetection, detectingUnit)
 
             -- trigger.action.outText('The unit detection table is: '..mist.utils.tableShow(unitDetection), 30)
@@ -112,12 +117,13 @@ do
 
             for i = 1, #detectedGroupsNames do
                 if detectedUnitGroupName == detectedGroupsNames[i] then
-                    -- trigger.action.outText(
-                    --     'Unit Radar detected! '..
-                    --     (requireType and '(-- Type is known --) ' or '')..
-                    --     detectedUnit:getTypeName()..' "'..detectedUnit:getName()..'"',
-                    --     30
-                    -- )
+                    logger:info(
+                        'Unit Radar detected! '..
+                        (requireType and '(-- Type is known --) ' or '')..
+                        detectedUnit:getTypeName()..' "'..detectedUnit:getName()..'"'..
+                        (detectingUnit and (' by '..detectingUnit:getName()) or '')..
+                        ' Jumping flag: '..flagNum
+                    )
                     trigger.action.setUserFlag(flagNum, true)
                     return false; -- false is for: stop the polling!
                 end
