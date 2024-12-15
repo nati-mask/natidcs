@@ -31,7 +31,7 @@ do
                 end
             end
 
-        end, {}, timer.getTime() + 10, interval);
+        end, {}, timer.getTime() + 10, interval)
 
     end
 
@@ -45,7 +45,7 @@ do
                 return false -- stop the polling
             end
 
-            local controller = detectingUnit:getController();
+            local controller = detectingUnit:getController()
 
             if (
                 not detectingUnit:isActive() or
@@ -62,7 +62,7 @@ do
             --     ' is detecting, radar enum: '..Controller.Detection.RADAR, 10
             -- )
 
-            local detections = controller:getDetectedTargets(Controller.Detection.RADAR);
+            local detections = controller:getDetectedTargets(Controller.Detection.RADAR)
 
             for i = 1, #detections do
                 local continue = func(detections[i], detectingUnit)
@@ -125,7 +125,7 @@ do
                         ' Jumping flag: '..flagNum
                     )
                     trigger.action.setUserFlag(flagNum, true)
-                    return false; -- false is for: stop the polling!
+                    return false -- false is for: stop the polling!
                 end
             end
 
