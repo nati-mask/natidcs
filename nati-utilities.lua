@@ -12,6 +12,12 @@ do
         return false
     end
 
+    local countKeysInTable = function (t)
+        local keysnum = 0;
+        for k in pairs(t) do keysnum = keysnum + 1 end
+        return keysnum
+    end
+
     local createDictSet = function (setName)
         return {
             name = setName or 'unknown',
@@ -29,6 +35,9 @@ do
             end,
             get = function(self, key)
                 return self.dict[key]
+            end,
+            length = function(self)
+                return countKeysInTable(self.dict)
             end,
             concat = function(self, sep)
                 local text = ''

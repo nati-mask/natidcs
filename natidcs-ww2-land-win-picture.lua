@@ -1,0 +1,98 @@
+--[[
+## Nati's additions to DCS
+]]
+natidcs = natidcs or {}
+
+do
+
+    natidcs.ww2LandWinPicture = {
+        debug = true,
+        flag = nil,
+        winPictureSet = nil,
+        onLandListener = nil,
+    }
+
+    local textToBlue = function (text, seconds)
+        trigger.action.outTextForCoalition(coalition.side.BLUE, text, seconds)
+    end
+
+    local getUnitUniqueId = function(unit)
+        if (not unit) or not (unit.id_) then error('Cannot uniquelt identify unit') end
+        return unit.id_
+    end
+
+    local addUnitsToDictSet = function(dictSet, units)
+        for i = 1, #units do
+            local name = units[i]:getPlayerName() or units[i]:getName()
+            dictSet:add(tostring(getUnitUniqueId(units[i])), name)
+        end
+    end
+
+    local onLand = function (event)
+        if
+            event.id == world.event.S_EVENT_LAND
+            and
+            event.initiator
+            and
+            event.initiator:getCategory() == Object.Category.UNIT
+        then
+            local landingUnit = event.initiator
+            local playerName = landingUnit:getPlayerName()
+            local unitName = landingUnit:getName()
+            if not natidcs.ww2LandWinPicture.debug and not playerName then return end
+
+            if natidcs.ww2LandWinPicture.winPictureSet:has(getUnitUniqueId(landingUnit)) then
+                if natidcs.ww2LandWinPicture.debug then
+                    textToBlue((playerName and 'Player ' or 'Unit ')..(playerName or unitName)..' landed successfully and we win the day!', 60)
+                end
+
+                -- THE WIN:
+                trigger.action.setUserFlag(natidcs.ww2LandWinPicture.flag, true)
+                mist.removeEventHandler(natidcs.ww2LandWinPicture.onLandListener)
+            end
+        end
+    end
+
+    local addOnLandEventListener = function ()
+
+        if (natidcs.ww2LandWinPicture.onLandListener) then return end
+
+        natidcs.ww2LandWinPicture.onLandListener = mist.addEventHandler(onLand)
+
+    end
+
+    local addBluePlanesToWinPicture = function (flag, options)
+        if not Natils then error('utilites for WW2 winning landing script was not loaded') end
+        if (not flag) or (type(flag) ~= 'number') then error('flag has not be set and be a number') end
+
+        local zoneName = 'WW2_WIN_LAND_PICTURE'
+
+        if (options and type(options) == 'table') then
+            if (not options.debug) then natidcs.ww2LandWinPicture.debug = false end
+            if (options.zoneName and type(zoneName) == 'string') then zoneName = options.zoneName end
+        end
+
+        natidcs.ww2LandWinPicture.winPictureSet = Natils.createDictSet('WIN Picture Units');
+
+        local units = mist.getUnitsInZones(mist.makeUnitTable({'[blue][plane]'}), {zoneName})
+
+        addUnitsToDictSet(natidcs.ww2LandWinPicture.winPictureSet, units)
+
+        natidcs.ww2LandWinPicture.flag = flag
+
+        addOnLandEventListener()
+
+    end
+
+    local displayWinningSet = function ()
+        if (not natidcs.ww2LandWinPicture.winPictureSet or natidcs.ww2LandWinPicture.winPictureSet:length() == 0) then
+            textToBlue('WW2 Winning set is empty', 20)
+        end
+        textToBlue('WW2 Winning set is:\n'..natidcs.ww2LandWinPicture.winPictureSet:concat(), 45)
+    end
+
+    -- Exports:
+    natidcs.ww2LandWinPicture.addBluePlanesToPicture = addBluePlanesToWinPicture
+    natidcs.ww2LandWinPicture.displayWinningSet = displayWinningSet
+
+end
