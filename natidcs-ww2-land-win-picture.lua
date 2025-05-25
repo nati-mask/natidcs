@@ -18,13 +18,13 @@ do
 
     local getUnitUniqueId = function(unit)
         if (not unit) or not (unit.id_) then error('Cannot uniquelt identify unit') end
-        return unit.id_
+        return tostring(unit.id_)
     end
 
     local addUnitsToDictSet = function(dictSet, units)
         for i = 1, #units do
             local name = units[i]:getPlayerName() or units[i]:getName()
-            dictSet:add(tostring(getUnitUniqueId(units[i])), name)
+            dictSet:add(getUnitUniqueId(units[i]), name)
         end
     end
 
@@ -39,11 +39,12 @@ do
             local landingUnit = event.initiator
             local playerName = landingUnit:getPlayerName()
             local unitName = landingUnit:getName()
+            local airBaseName = event.place and event.place:getName();
             if not natidcs.ww2LandWinPicture.debug and not playerName then return end
 
             if natidcs.ww2LandWinPicture.winPictureSet:has(getUnitUniqueId(landingUnit)) then
                 if natidcs.ww2LandWinPicture.debug then
-                    textToBlue((playerName and 'Player ' or 'Unit ')..(playerName or unitName)..' landed successfully and we win the day!', 60)
+                    textToBlue((playerName and 'Player ' or 'Unit ')..(playerName or unitName)..' landed successfully at '..airBaseName..' and we are winning the day!', 60)
                 end
 
                 -- THE WIN:
@@ -72,6 +73,9 @@ do
             if (options.zoneName and type(zoneName) == 'string') then zoneName = options.zoneName end
         end
 
+        local zone = trigger.misc.getZone(zoneName)
+        if not zone then textToBlue('Zone '..zoneName..'doen\'t exist for the winning trigger') return end
+
         natidcs.ww2LandWinPicture.winPictureSet = Natils.createDictSet('WIN Picture Units');
 
         local units = mist.getUnitsInZones(mist.makeUnitTable({'[blue][plane]'}), {zoneName})
@@ -87,8 +91,9 @@ do
     local displayWinningSet = function ()
         if (not natidcs.ww2LandWinPicture.winPictureSet or natidcs.ww2LandWinPicture.winPictureSet:length() == 0) then
             textToBlue('WW2 Winning set is empty', 20)
+        else
+            textToBlue('WW2 Winning set is:\n'..natidcs.ww2LandWinPicture.winPictureSet:concat(), 45)
         end
-        textToBlue('WW2 Winning set is:\n'..natidcs.ww2LandWinPicture.winPictureSet:concat(), 45)
     end
 
     -- Exports:
