@@ -31,7 +31,7 @@ do
     end
 
     local displayWinningSet = function ()
-        if (not natidcs.ww2LandWinPicture.winPictureSet or natidcs.ww2LandWinPicture.winPictureSet:length() == 0) then
+        if (not natidcs.ww2LandWinPicture.winPictureSet or (natidcs.ww2LandWinPicture.winPictureSet:length() == 0)) then
             textToBlue('WW2 Winning set is empty', 20)
         else
             textToBlue('WW2 Winning set is:\n'..natidcs.ww2LandWinPicture.winPictureSet:concat(), 45)
@@ -52,11 +52,17 @@ do
             local airBaseName = event.place and event.place:getName();
 
             if not natidcs.ww2LandWinPicture.debug and not playerName then return end
-            if natidcs.ww2LandWinPicture.airbase and (not natidcs.ww2LandWinPicture.airbase == airBaseName) then return end
+
+            if natidcs.ww2LandWinPicture.airbase and (natidcs.ww2LandWinPicture.airbase ~= airBaseName) then
+                if natidcs.ww2LandWinPicture.debug then
+                    textToBlue((playerName and 'Player ' or 'Unit ')..(playerName or unitName)..' landed alive at '..airBaseName..' but this is not the correct airport.\nNeed to land at '..natidcs.ww2LandWinPicture.airbase, 60)
+                end
+                return
+            end
 
             if natidcs.ww2LandWinPicture.winPictureSet:has(getUnitUniqueId(landingUnit)) then
                 if natidcs.ww2LandWinPicture.debug or natidcs.ww2LandWinPicture.showLander then
-                    textToBlue((playerName and 'Player ' or 'Unit ')..(playerName or unitName)..' landed successfully at '..airBaseName..' and we are winning the day!', 60)
+                    textToBlue((playerName and 'Player ' or 'Unit ')..(playerName or unitName)..' landed alive at '..airBaseName..' and we are winning the day!', 60)
                 end
 
                 -- THE WIN:
