@@ -3,12 +3,17 @@
 ]]
 natidcs = natidcs or {}
 
+if natidcs.ww2LandWinPicture then return end
+
 do
+
+    if not Natils then error('utilites for WW2 winning landing script was not loaded') end
+    if not mist then error('in order to run WW2 winning landing script you need to load mist') end
 
     natidcs.ww2LandWinPicture = {
         debug = true,
         flag = nil,
-        winPictureSet = nil,
+        winPictureSet = Natils.createDictSet('WIN Picture Units'),
         onLandListener = nil,
         airbase = nil,
         showLander = nil,
@@ -68,6 +73,7 @@ do
                 -- THE WIN:
                 trigger.action.setUserFlag(natidcs.ww2LandWinPicture.flag, true)
                 mist.removeEventHandler(natidcs.ww2LandWinPicture.onLandListener)
+                natidcs.ww2LandWinPicture.onLandListener = nil
             end
         end
     end
@@ -80,25 +86,31 @@ do
 
     end
 
+    local validateZones = function (zones)
+        if type(zones) ~= 'table' then error('zones table has to be a table') end
+        for i = 1, #zones do
+            local zone = trigger.misc.getZone(zones[i])
+            if not zone then error('Zone '..zones[i]..'doen\'t exist for the winning trigger') end
+        end
+    end
+
     local takeWinPicture = function (flag, options)
-        if not Natils then error('utilites for WW2 winning landing script was not loaded') end
+
         if (not flag) or (type(flag) ~= 'number') then error('missing flag argument or it\'s not a number') end
 
-        local zoneName = 'WW2_WIN_LAND_PICTURE'
+        local zones = { 'WW2_WIN_LAND_PICTURE' }
 
         if (options and type(options) == 'table') then
             if (not options.debug) then natidcs.ww2LandWinPicture.debug = false end
-            if (options.zoneName and type(options.zoneName) == 'string') then zoneName = options.zoneName end
+            if (options.zones and type(options.zones) == 'table') then zones = options.zones end
             if (options.airbase and type(options.airbase) == 'string') then natidcs.ww2LandWinPicture.airbase = options.airbase end
             if (options.showLander and type(options.showLander) == 'boolean') then natidcs.ww2LandWinPicture.showLander = options.showLander end
         end
 
-        local zone = trigger.misc.getZone(zoneName)
-        if not zone then textToBlue('Zone '..zoneName..'doen\'t exist for the winning trigger') return end
+        local valid, validationErrMsg = pcall(validateZones, zones)
+        if not valid then textToBlue(validationErrMsg, 60) end
 
-        natidcs.ww2LandWinPicture.winPictureSet = Natils.createDictSet('WIN Picture Units');
-
-        local units = mist.getUnitsInZones(mist.makeUnitTable({'[blue][plane]'}), {zoneName})
+        local units = mist.getUnitsInZones(mist.makeUnitTable({'[blue][plane]'}), zones)
 
         addUnitsToDictSet(natidcs.ww2LandWinPicture.winPictureSet, units)
 
