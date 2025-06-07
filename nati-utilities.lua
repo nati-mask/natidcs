@@ -5,6 +5,13 @@ Natils = Natils or {}
 
 do
 
+    local includesVal = function (t, val)
+        for _, tVal in pairs(t) do
+            if val == tVal then return true end
+        end
+        return false
+    end
+
     local includesKey = function (t, key)
         for k in pairs(t) do
             if (k == key) then return true end
@@ -53,9 +60,19 @@ do
 
     Natils.createDictSet = createDictSet
 
+    Natils.tableIncludesVal = function(t, val)
+        if (type(t) ~= 'table') then error('tableIncludesVal can run only on tables but received a '..type(t)) end
+        return includesVal(t, val)
+    end
+
+
 end
 
 -- local set1 = Natils.createDictSet('Testy')
+
+-- print('is this including: '..tostring(Natils.tableIncludesVal({ 'aab', 'foo', '12' }, 12)))
+
+-- print(table.concat({ 'foo', 'bar' }, ', '))
 
 -- print(set1:has('a'));
 -- set1:add('a', 'moshiko')

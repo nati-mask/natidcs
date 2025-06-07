@@ -15,7 +15,7 @@ do
         flag = nil,
         winPictureSet = Natils.createDictSet('WIN Picture Units'),
         onLandListener = nil,
-        airbase = nil,
+        airbases = nil,
         showLander = nil,
     }
 
@@ -54,13 +54,14 @@ do
             local landingUnit = event.initiator
             local playerName = landingUnit:getPlayerName()
             local unitName = landingUnit:getName()
-            local airBaseName = event.place and event.place:getName();
+            local airBaseName = event.place and event.place:getName()
+            local airBasesToLand = natidcs.ww2LandWinPicture.airbases
 
             if not natidcs.ww2LandWinPicture.debug and not playerName then return end
 
-            if natidcs.ww2LandWinPicture.airbase and (natidcs.ww2LandWinPicture.airbase ~= airBaseName) then
+            if airBasesToLand and (not Natils.tableIncludesVal(airBasesToLand, airBaseName)) then
                 if natidcs.ww2LandWinPicture.debug then
-                    textToBlue((playerName and 'Player ' or 'Unit ')..(playerName or unitName)..' landed alive at '..airBaseName..' but this is not the correct airport.\nNeed to land at '..natidcs.ww2LandWinPicture.airbase, 60)
+                    textToBlue((playerName and 'Player ' or 'Unit ')..(playerName or unitName)..' landed alive at '..airBaseName..' but this is not the correct airport.\nNeed to land at '..table.concat(airBasesToLand, 'or '), 60)
                 end
                 return
             end
@@ -90,7 +91,16 @@ do
         if type(zones) ~= 'table' then error('zones table has to be a table') end
         for i = 1, #zones do
             local zone = trigger.misc.getZone(zones[i])
-            if not zone then error('Zone '..zones[i]..'doen\'t exist for the winning trigger') end
+            if not zone then error('Zone "'..zones[i]..'" doesn\'t exist for the winning trigger') end
+        end
+    end
+
+    local validateAirbases = function (airbases)
+        if not airbases then return end
+        if type(airbases) ~= 'table' then error('airbases table has to be a table (list)') end
+        for i = 1, #airbases do
+            local airBase = Airbase.getByName(airbases[i])
+            if not airBase then error('Airbase "'..airbases[i]..'" doesn\'t exist for the winning trigger') end
         end
     end
 
@@ -103,12 +113,17 @@ do
         if (options and type(options) == 'table') then
             if (not options.debug) then natidcs.ww2LandWinPicture.debug = false end
             if (options.zones and type(options.zones) == 'table') then zones = options.zones end
-            if (options.airbase and type(options.airbase) == 'string') then natidcs.ww2LandWinPicture.airbase = options.airbase end
+            if (options.airbase and type(options.airbase) == 'string') then natidcs.ww2LandWinPicture.airbases = { options.airbase } end
+            if (options.airbase and type(options.airbase) == 'table') then natidcs.ww2LandWinPicture.airbases = options.airbase end
+            if (options.airbases and type(options.airbases) == 'table') then natidcs.ww2LandWinPicture.airbases = options.airbases end
             if (options.showLander and type(options.showLander) == 'boolean') then natidcs.ww2LandWinPicture.showLander = options.showLander end
         end
 
-        local valid, validationErrMsg = pcall(validateZones, zones)
-        if not valid then textToBlue(validationErrMsg, 60) end
+        local zonesValid, validationZonesErrMsg = pcall(validateZones, zones)
+        if not zonesValid then textToBlue(validationZonesErrMsg, 60) end
+
+        local airBasesValid, validationAirbasesErrMsg = pcall(validateAirbases, natidcs.ww2LandWinPicture.airbases)
+        if not airBasesValid then textToBlue(validationAirbasesErrMsg, 60) end
 
         local units = mist.getUnitsInZones(mist.makeUnitTable({'[blue][plane]'}), zones)
 
