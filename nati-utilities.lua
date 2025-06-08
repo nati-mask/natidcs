@@ -83,3 +83,5 @@ end
 -- print(set1:get('b'));
 -- print(set1:get('c'));
 -- print('\n'..set1.name..' set now is:\n'..set1:concat())
+
+-- print(#{ 'goo', 'bar', 'loor' })
