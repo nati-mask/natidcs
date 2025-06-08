@@ -59,14 +59,15 @@ do
 
             if not natidcs.ww2LandWinPicture.debug and not playerName then return end
 
-            if airBasesToLand and (not Natils.tableIncludesVal(airBasesToLand, airBaseName)) then
-                if natidcs.ww2LandWinPicture.debug then
-                    textToBlue((playerName and 'Player ' or 'Unit ')..(playerName or unitName)..' landed alive at '..airBaseName..' but this is not the correct airport.\nNeed to land at '..table.concat(airBasesToLand, 'or '), 60)
-                end
-                return
-            end
-
             if natidcs.ww2LandWinPicture.winPictureSet:has(getUnitUniqueId(landingUnit)) then
+
+                if airBasesToLand and (not Natils.tableIncludesVal(airBasesToLand, airBaseName)) then
+                    if natidcs.ww2LandWinPicture.debug then
+                        textToBlue((playerName and 'Player ' or 'Unit ')..(playerName or unitName)..' landed alive at '..airBaseName..' but this is not the correct airport.\nNeed to land at '..table.concat(airBasesToLand, ' or '), 60)
+                    end
+                    return
+                end
+
                 if natidcs.ww2LandWinPicture.debug or natidcs.ww2LandWinPicture.showLander then
                     textToBlue((playerName and 'Player ' or 'Unit ')..(playerName or unitName)..' landed alive at '..airBaseName..' and we are winning the day!', 60)
                 end
@@ -75,6 +76,7 @@ do
                 trigger.action.setUserFlag(natidcs.ww2LandWinPicture.flag, true)
                 mist.removeEventHandler(natidcs.ww2LandWinPicture.onLandListener)
                 natidcs.ww2LandWinPicture.onLandListener = nil
+
             end
         end
     end
