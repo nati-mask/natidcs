@@ -24,7 +24,7 @@ do
     end
 
     local getUnitUniqueId = function(unit)
-        if (not unit) or not (unit.id_) then error('Cannot uniquelt identify unit') end
+        if (not unit) or not (unit.id_) then error('Cannot uniquely identify unit') end
         return tostring(unit.id_)
     end
 
@@ -43,6 +43,23 @@ do
         end
     end
 
+    local validateZones = function (zones)
+        if type(zones) ~= 'table' then error('zones table has to be a table') end
+        for i = 1, #zones do
+            local zone = trigger.misc.getZone(zones[i])
+            if not zone then error('Zone "'..zones[i]..'" doesn\'t exist for the winning trigger') end
+        end
+    end
+
+    local validateAirbases = function (airbases)
+        if not airbases then return end
+        if type(airbases) ~= 'table' then error('airbases table has to be a table (list)') end
+        for i = 1, #airbases do
+            local airBase = Airbase.getByName(airbases[i])
+            if not airBase then error('Airbase "'..airbases[i]..'" doesn\'t exist for the winning trigger') end
+        end
+    end
+
     local onLand = function (event)
         if
             event.id == world.event.S_EVENT_LAND
@@ -55,6 +72,12 @@ do
             local playerName = landingUnit:getPlayerName()
             local unitName = landingUnit:getName()
             local airBaseName = event.place and event.place:getName()
+
+            local airBasesValid, validationAirbasesErrMsg = pcall(validateAirbases, natidcs.ww2LandWinPicture.airbases)
+            if not airBasesValid then
+                textToBlue(validationAirbasesErrMsg, 60)
+                return
+            end
             local airBasesToLand = natidcs.ww2LandWinPicture.airbases
 
             if not natidcs.ww2LandWinPicture.debug and not playerName then return end
@@ -83,30 +106,20 @@ do
 
     local addOnLandEventListener = function ()
 
-        if (natidcs.ww2LandWinPicture.onLandListener) then return end
+        if (natidcs.ww2LandWinPicture.onLandListener) then
+            if natidcs.ww2LandWinPicture.debug then textToBlue('Called setWin() but landing trigger already exists', 60) end
+            return
+        end
+
+        if natidcs.ww2LandWinPicture.debug then
+            displayWinningSet()
+        end
 
         natidcs.ww2LandWinPicture.onLandListener = mist.addEventHandler(onLand)
 
     end
 
-    local validateZones = function (zones)
-        if type(zones) ~= 'table' then error('zones table has to be a table') end
-        for i = 1, #zones do
-            local zone = trigger.misc.getZone(zones[i])
-            if not zone then error('Zone "'..zones[i]..'" doesn\'t exist for the winning trigger') end
-        end
-    end
-
-    local validateAirbases = function (airbases)
-        if not airbases then return end
-        if type(airbases) ~= 'table' then error('airbases table has to be a table (list)') end
-        for i = 1, #airbases do
-            local airBase = Airbase.getByName(airbases[i])
-            if not airBase then error('Airbase "'..airbases[i]..'" doesn\'t exist for the winning trigger') end
-        end
-    end
-
-    local takeWinPicture = function (flag, options)
+    local updateWinPicture = function (flag, options)
 
         if (not flag) or (type(flag) ~= 'number') then error('missing flag argument or it\'s not a number') end
 
@@ -124,9 +137,6 @@ do
         local zonesValid, validationZonesErrMsg = pcall(validateZones, zones)
         if not zonesValid then textToBlue(validationZonesErrMsg, 60) end
 
-        local airBasesValid, validationAirbasesErrMsg = pcall(validateAirbases, natidcs.ww2LandWinPicture.airbases)
-        if not airBasesValid then textToBlue(validationAirbasesErrMsg, 60) end
-
         local units = mist.getUnitsInZones(mist.makeUnitTable({'[blue][plane]'}), zones)
 
         addUnitsToDictSet(natidcs.ww2LandWinPicture.winPictureSet, units)
@@ -138,12 +148,11 @@ do
             textToBlue('Winning configurations:\n'..mist.utils.tableShow(natidcs.ww2LandWinPicture), 45)
         end
 
-        addOnLandEventListener()
-
     end
 
     -- Exports:
-    natidcs.ww2LandWinPicture.takeWinPicture = takeWinPicture
+    natidcs.ww2LandWinPicture.updateWinPicture = updateWinPicture
+    natidcs.ww2LandWinPicture.setWin = addOnLandEventListener
     natidcs.ww2LandWinPicture.displayWinningSet = displayWinningSet
 
 end
