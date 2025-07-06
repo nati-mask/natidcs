@@ -8,7 +8,8 @@ if natidcs.ww2LandWinPicture then return end
 do
 
     if not Natils then error('utilites for WW2 winning landing script was not loaded') end
-    if not mist then error('in order to run WW2 winning landing script you need to load mist') end
+    if not mist then error('in order to run WW2 winning landing script you need to load MIST') end
+    if not NatiMist then error('utilites for WW2 winning landing script based on MIST was not loaded') end
 
     natidcs.ww2LandWinPicture = {
         debug = true,
@@ -128,6 +129,7 @@ do
         if (options and type(options) == 'table') then
             if (not options.debug) then natidcs.ww2LandWinPicture.debug = false end
             if (options.zones and type(options.zones) == 'table') then zones = options.zones end
+
             if (options.airbase and type(options.airbase) == 'string') then natidcs.ww2LandWinPicture.airbases = { options.airbase } end
             if (options.airbase and type(options.airbase) == 'table') then natidcs.ww2LandWinPicture.airbases = options.airbase end
             if (options.airbases and type(options.airbases) == 'table') then natidcs.ww2LandWinPicture.airbases = options.airbases end
@@ -135,9 +137,12 @@ do
         end
 
         local zonesValid, validationZonesErrMsg = pcall(validateZones, zones)
-        if not zonesValid then textToBlue(validationZonesErrMsg, 60) end
+        if not zonesValid then
+            textToBlue(validationZonesErrMsg, 60)
+            return
+        end
 
-        local units = mist.getUnitsInZones(mist.makeUnitTable({'[blue][plane]'}), zones)
+        local units = NatiMist.getUnitsInZones(mist.makeUnitTable({'[blue][plane]'}), zones)
 
         addUnitsToDictSet(natidcs.ww2LandWinPicture.winPictureSet, units)
 
