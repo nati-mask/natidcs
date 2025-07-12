@@ -74,11 +74,15 @@ do
             local unitName = landingUnit:getName()
             local airBaseName = event.place and event.place:getName()
 
+            -- If landed on ground:
+            if (not airBaseName) then return end
+
             local airBasesValid, validationAirbasesErrMsg = pcall(validateAirbases, natidcs.ww2LandWinPicture.airbases)
             if not airBasesValid then
                 textToBlue(validationAirbasesErrMsg, 60)
                 return
             end
+
             local airBasesToLand = natidcs.ww2LandWinPicture.airbases
 
             if not natidcs.ww2LandWinPicture.debug and not playerName then return end
