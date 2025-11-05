@@ -22,8 +22,6 @@ do
 
         scheduledDetection = mist.scheduleFunction(function ()
 
-            trigger.action.outText('Do Polling for '..#self.detectingUnits..' units', self.interval)
-
             for i = 1, #self.detectingUnits do
                 local continue
                 local success, result = pcall(function() return func(self.detectingUnits[i]) end)
@@ -47,8 +45,6 @@ do
     local function addRadarDetectionPollingForUnits(self, func)
 
         local deadUnits = {}
-
-        trigger.action.outText('Polling now...', 20)
 
         self:addPollingForUnits(function (detectingUnit)
 
@@ -75,12 +71,22 @@ do
             --     ' is detecting, radar enum: '..Controller.Detection.RADAR, 10
             -- )
 
-            if self.testUnit and self.testUnit:isExist() and self.testUnit:isActive() then
-                local unitPoint = self.testUnit:getPoint()
-                local radarPoint = detectingUnit:getPoint()
-                local ang = NatiMist.degAngleBetweenPoints(radarPoint, unitPoint)
-                trigger.action.outText('Ang to: '..detectingUnit:getName()..' is: '..ang, self.interval)
+            -- TODO extract:
+            local unitsSolver = {}
+            for i = 1, #self.detectedGroupsNames do table.insert(unitsSolver, '[g]'..self.detectedGroupsNames[i]) end
+            local allUnitsThatCanBeDetected = mist.makeUnitTable(unitsSolver)
+            local angTexts = {}
+            for i = 1, #allUnitsThatCanBeDetected do
+                local unit = Unit.getByName(allUnitsThatCanBeDetected[i])
+                if unit and unit:isExist() and unit:isActive() then
+                    local unitPoint = unit:getPoint()
+                    local radarPoint = detectingUnit:getPoint()
+                    local ang = NatiMist.degAngleBetweenPoints(radarPoint, unitPoint)
+                    table.insert(angTexts, 'Ang from radar: '..detectingUnit:getName()..' to '..unit:getName()..' is:\n'..ang)
+                end
             end
+            trigger.action.outText(table.concat(angTexts, '\n'), self.interval);
+
 
             local detections = controller:getDetectedTargets(Controller.Detection.RADAR)
 
@@ -96,8 +102,6 @@ do
     local function pollIsGroupsRadarDetectedBy(self)
 
         self.logger:info('Starting Detection polling in '..self.interval..'s for '..#self.detectingUnits..' detecting radar units')
-
-        trigger.action.outText('Starting...', 16)
 
         self:addRadarDetectionPollingForUnits(function (unitDetection, detectingUnit)
 
@@ -143,11 +147,6 @@ do
 
     end
 
-    local setTestUnit = function(self, unitName)
-        if (self.testUnit) then error('NatiDCS Radar: there is already a test unit') end
-        self.testUnit = Unit.getByName(unitName)
-    end
-
     local function makeRadarPoller(detectingUnitsNames, detectedGroupsNames, options)
 
         if not mist then error('MIST is not loaded') end
@@ -187,12 +186,10 @@ do
             flagNum = (options and type(options) == 'table' and type(options.flagNum) == 'number') and options.flagNum or nil,
             onBlame = (options and type(options) == 'table' and type(options.onBlame) == 'function') and options.onBlame or nil,
             interval = interval,
-            testUnit = nil,
             detectingUnits = detectingUnits,
             detectedGroupsNames = detectedGroupsNames,
 
             -- Methods:
-            setTestUnit = setTestUnit,
             addRadarDetectionPollingForUnits = addRadarDetectionPollingForUnits,
             addPollingForUnits = addPollingForUnits,
 
@@ -202,7 +199,6 @@ do
 
     natidcs.radarDetection.startRadarDetectionPolling = function(...)
         local arguments = {...}
-        trigger.action.outText('Polling with self poller! Arguments:\n'..mist.utils.tableShow(arguments), 10)
 
         local success, result = pcall(function()
             ---@diagnostic disable-next-line: deprecated
