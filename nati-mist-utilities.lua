@@ -75,6 +75,16 @@ do
         return in_zone_units
     end
 
+    local function degAngleBetweenPoints(pointNearAngle, pointInFrontOfAngle)
+        local dist = mist.utils.get3DDist(pointInFrontOfAngle, pointNearAngle)
+        local heightsDelta = pointInFrontOfAngle.y - pointNearAngle.y
+        if math.abs(heightsDelta) > dist then error('error in calc angle between points') end
+        local angRad = math.asin(heightsDelta / dist)
+        return mist.utils.toDegree(angRad)
+    end
+
+
     NatiMist.getUnitsInZones = getUnitsInZones
+    NatiMist.degAngleBetweenPoints = degAngleBetweenPoints
 
 end
