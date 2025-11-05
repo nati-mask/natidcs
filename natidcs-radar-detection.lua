@@ -11,8 +11,6 @@ do
 
     -- TODO: Cleanup:
     local testUnit
-    local testPoint
-
     local logger
 
     -- TODO: Util!
@@ -56,6 +54,8 @@ do
 
         addPollingForUnits(detectingUnits, function (detectingUnit)
 
+            if not detectingUnit then error('poll called on detecting unit that was never exists') end
+
             if (tableLength(deadUnits) == #detectingUnits) then
                 return false -- stop the polling
             end
@@ -77,13 +77,11 @@ do
             --     ' is detecting, radar enum: '..Controller.Detection.RADAR, 10
             -- )
 
-            if testPoint and testUnit and testUnit:isExist() and testUnit:isActive() then
+            if testUnit and testUnit:isExist() and testUnit:isActive() then
                 local unitPoint = testUnit:getPoint()
-                local dist = mist.utils.get3DDist(unitPoint, testPoint)
-                local height = unitPoint.y
-                -- trigger.action.outText('Test Unit: '..testUnit:getName()..' is here:\n'..mist.utils.tableShow(unitPoint), 5)
-                local angRad = math.asin(height / dist)
-                trigger.action.outText('Distance: '..dist..' Height: '..height..' Ang: '..mist.utils.toDegree(angRad), 5)
+                local radarPoint = detectingUnit:getPoint()
+                local ang = NatiMist.degAngleBetweenPoints(radarPoint, unitPoint)
+                trigger.action.outText('Ang to: '..detectingUnit:getName()..' is: '..ang, interval)
             end
 
             local detections = controller:getDetectedTargets(Controller.Detection.RADAR)
@@ -100,6 +98,8 @@ do
     local function pollIsGroupsRadarDetectedBy(detectingUnitsNames, detectedGroupsNames, flagNum, requireType, interval)
 
         if not mist then error('MIST is not loaded') end
+        if not NatiMist then error('utilities built on MIST are not loaded') end
+
         if not logger then logger = mist.Logger:new("Radar Detection Sctipt (Nati)", "info") end
 
         if not detectingUnitsNames or type(detectingUnitsNames) ~= 'table' then
@@ -179,11 +179,6 @@ do
     natidcs.radarDetection.isGroupsRadarDetectedBy = function(...)
         local arguments = {...}
         -- trigger.action.outText('Arguments:\n'..mist.utils.tableShow(arguments), 10)
-
-        -- local ab = Airbase.getByName('Holmsley South')
-        -- testPoint = ab:getPoint()
-
-        -- trigger.action.outText('Test Airbase:\n'..mist.utils.tableShow(testPoint), 180)
 
         ---@diagnostic disable-next-line: deprecated
         local success, result = pcall(function() return pollIsGroupsRadarDetectedBy(unpack(arguments)) end)
