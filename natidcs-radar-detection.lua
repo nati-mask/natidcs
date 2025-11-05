@@ -9,10 +9,6 @@ natidcs.radarDetection = {}
 
 do
 
-    -- TODO: Cleanup:
-    local testUnit
-    local logger
-
     -- TODO: Util!
     local function tableLength(T)
         local count = 0
@@ -20,17 +16,17 @@ do
         return count
     end
 
-    local function addPollingForUnits(units, func, interval)
+    local function addPollingForUnits(self, func)
 
         local scheduledDetection
 
         scheduledDetection = mist.scheduleFunction(function ()
 
-            -- trigger.action.outText('Do Polling for '..#units..' units', interval)
+            trigger.action.outText('Do Polling for '..#self.detectingUnits..' units', self.interval)
 
-            for i = 1, #units do
+            for i = 1, #self.detectingUnits do
                 local continue
-                local success, result = pcall(function() return func(units[i]) end)
+                local success, result = pcall(function() return func(self.detectingUnits[i]) end)
                 if success then
                     continue = result
                 else
@@ -39,24 +35,26 @@ do
                 end
                 if continue == false then
                     -- trigger.action.outText('Stopping polling for units', 30)
-                    logger:info('Stopping polling session for units')
+                    self.logger:info('Stopping polling session for units')
                     mist.removeFunction(scheduledDetection)
                 end
             end
 
-        end, {}, timer.getTime() + 10, interval)
+        end, {}, timer.getTime() + 10, self.interval)
 
     end
 
-    local function addRadarDetectionPollingForUnits(detectingUnits, func, interval)
+    local function addRadarDetectionPollingForUnits(self, func)
 
         local deadUnits = {}
 
-        addPollingForUnits(detectingUnits, function (detectingUnit)
+        trigger.action.outText('Polling now...', 20)
+
+        self:addPollingForUnits(function (detectingUnit)
 
             if not detectingUnit then error('poll called on detecting unit that was never exists') end
 
-            if (tableLength(deadUnits) == #detectingUnits) then
+            if (tableLength(deadUnits) == #self.detectingUnits) then
                 return false -- stop the polling
             end
 
@@ -77,11 +75,11 @@ do
             --     ' is detecting, radar enum: '..Controller.Detection.RADAR, 10
             -- )
 
-            if testUnit and testUnit:isExist() and testUnit:isActive() then
-                local unitPoint = testUnit:getPoint()
+            if self.testUnit and self.testUnit:isExist() and self.testUnit:isActive() then
+                local unitPoint = self.testUnit:getPoint()
                 local radarPoint = detectingUnit:getPoint()
                 local ang = NatiMist.degAngleBetweenPoints(radarPoint, unitPoint)
-                trigger.action.outText('Ang to: '..detectingUnit:getName()..' is: '..ang, interval)
+                trigger.action.outText('Ang to: '..detectingUnit:getName()..' is: '..ang, self.interval)
             end
 
             local detections = controller:getDetectedTargets(Controller.Detection.RADAR)
@@ -91,16 +89,69 @@ do
                 if continue == false then return false end
             end
 
-        end, interval)
+        end, self.interval)
 
     end
 
-    local function pollIsGroupsRadarDetectedBy(detectingUnitsNames, detectedGroupsNames, flagNum, requireType, interval)
+    local function pollIsGroupsRadarDetectedBy(self)
+
+        self.logger:info('Starting Detection polling in '..self.interval..'s for '..#self.detectingUnits..' detecting radar units')
+
+        trigger.action.outText('Starting...', 16)
+
+        self:addRadarDetectionPollingForUnits(function (unitDetection, detectingUnit)
+
+            -- Here we know a unit is detected:
+
+            -- trigger.action.outText('The unit detection table is: '..mist.utils.tableShow(unitDetection), 30)
+            local detectedUnit = unitDetection.object
+            local requireType = nil
+
+            -- If unit is broken or out somehow, continue
+            if (
+                not detectedUnit or
+                not detectedUnit['getGroup'] or
+                not detectedUnit:isActive() or
+                not detectedUnit:isExist()
+            ) then return end
+
+            local detectedUnitGroup = detectedUnit:getGroup()
+            if not detectedUnitGroup then return end
+            local detectedUnitGroupName = detectedUnitGroup:getName()
+
+            -- TODO (still unused):
+            if requireType then
+                if not unitDetection.type then return end
+            end
+
+            for i = 1, #self.detectedGroupsNames do
+                if detectedUnitGroupName == self.detectedGroupsNames[i] then
+                    self.logger:info(
+                        'Unit Radar detected! '..
+                        (requireType and '(-- Type is known --) ' or '')..
+                        detectedUnit:getTypeName()..' "'..detectedUnit:getName()..'"'..
+                        (detectingUnit and (' by '..detectingUnit:getName()) or '')..
+                        (self.flagNum and (' setting flag: '..self.flagNum..' to true.') or '')
+                    )
+                    if (self.flagNum) then trigger.action.setUserFlag(self.flagNum, true) end
+                    if (self.onBlame) then self.onBlame(detectedUnit, detectingUnit) end
+                    return false -- false is for: stop the polling!
+                end
+            end
+
+        end, self.interval)
+
+    end
+
+    local setTestUnit = function(self, unitName)
+        if (self.testUnit) then error('NatiDCS Radar: there is already a test unit') end
+        self.testUnit = Unit.getByName(unitName)
+    end
+
+    local function makeRadarPoller(detectingUnitsNames, detectedGroupsNames, options)
 
         if not mist then error('MIST is not loaded') end
         if not NatiMist then error('utilities built on MIST are not loaded') end
-
-        if not logger then logger = mist.Logger:new("Radar Detection Sctipt (Nati)", "info") end
 
         if not detectingUnitsNames or type(detectingUnitsNames) ~= 'table' then
             error('Missing Detecting Units (Radar) Names')
@@ -122,69 +173,48 @@ do
         end
 
         if #detectingUnits == 0 then
-            trigger.action.outText('Error: Empty list of detecting units provided, no radar detection polling started', 30)
-            return
+            error('Empty list of detecting units provided, no radar detection polling started', 30)
         end
 
+        local interval = (options and type(options) == "table" and type(options.interval) == "number") and options.interval or nil
         if (not interval) then interval = #detectingUnits * 2 end
         if (interval < 2) then interval = 2 end
 
-        logger:info('Starting Detection in '..interval..'s for '..#detectingUnits..' detecting radar units')
+        return {
+            logger = mist.Logger:new("Radar Detection Sctipt (Nati)", "info"),
 
-        addRadarDetectionPollingForUnits(detectingUnits, function (unitDetection, detectingUnit)
+            -- props:
+            flagNum = (options and type(options) == 'table' and type(options.flagNum) == 'number') and options.flagNum or nil,
+            onBlame = (options and type(options) == 'table' and type(options.onBlame) == 'function') and options.onBlame or nil,
+            interval = interval,
+            testUnit = nil,
+            detectingUnits = detectingUnits,
+            detectedGroupsNames = detectedGroupsNames,
 
-            -- trigger.action.outText('The unit detection table is: '..mist.utils.tableShow(unitDetection), 30)
-            local detectedUnit = unitDetection.object
+            -- Methods:
+            setTestUnit = setTestUnit,
+            addRadarDetectionPollingForUnits = addRadarDetectionPollingForUnits,
+            addPollingForUnits = addPollingForUnits,
 
-            -- If unit is broken or out somehow, continue
-            if (
-                not detectedUnit or
-                not detectedUnit['getGroup'] or
-                not detectedUnit:isActive() or
-                not detectedUnit:isExist()
-            ) then return end
-
-            local detectedUnitGroup = detectedUnit:getGroup()
-            if not detectedUnitGroup then return end
-            local detectedUnitGroupName = detectedUnitGroup:getName()
-
-            -- TODO (still unused):
-            if requireType then
-                if not unitDetection.type then return end
-            end
-
-            for i = 1, #detectedGroupsNames do
-                if detectedUnitGroupName == detectedGroupsNames[i] then
-                    logger:info(
-                        'Unit Radar detected! '..
-                        (requireType and '(-- Type is known --) ' or '')..
-                        detectedUnit:getTypeName()..' "'..detectedUnit:getName()..'"'..
-                        (detectingUnit and (' by '..detectingUnit:getName()) or '')..
-                        ' Jumping flag: '..(flagNum or 'UNSET')
-                    )
-                    if (flagNum) then trigger.action.setUserFlag(flagNum, true) end
-                    return false -- false is for: stop the polling!
-                end
-            end
-
-        end, interval)
-
+            start = pollIsGroupsRadarDetectedBy
+        }
     end
 
-    natidcs.radarDetection.setTestUnit = function(unitName)
-        if (testUnit) then error('NatiDCS Radar: there is already a test unit') end
-        testUnit = Unit.getByName(unitName)
-    end
-
-    natidcs.radarDetection.isGroupsRadarDetectedBy = function(...)
+    natidcs.radarDetection.startRadarDetectionPolling = function(...)
         local arguments = {...}
-        -- trigger.action.outText('Arguments:\n'..mist.utils.tableShow(arguments), 10)
+        trigger.action.outText('Polling with self poller! Arguments:\n'..mist.utils.tableShow(arguments), 10)
 
-        ---@diagnostic disable-next-line: deprecated
-        local success, result = pcall(function() return pollIsGroupsRadarDetectedBy(unpack(arguments)) end)
+        local success, result = pcall(function()
+            ---@diagnostic disable-next-line: deprecated
+            local radarDetectionPoller = makeRadarPoller(unpack(arguments))
+            radarDetectionPoller:start()
+            return radarDetectionPoller
+        end)
 
         if not success then
             trigger.action.outText('Error in Radar Detection Script:\n'..result, 120)
+        else
+            return result -- radarDetectionPoller
         end
     end
 end
