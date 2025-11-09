@@ -29,10 +29,10 @@ do
         return {
             name = setName or 'unknown',
             dict = {},
-            add = function(self, key, val)
+            add = function(self, key, val, override)
                 if not key then return end
                 if (type(key) ~= 'string') then error('Set key can only be a string') end
-                if includesKey(self.dict, key) then return end
+                if not override and includesKey(self.dict, key) then return end
                 self.dict[key] = val or 'unknown'
             end,
             has = function(self, key)

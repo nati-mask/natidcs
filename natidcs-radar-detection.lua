@@ -71,7 +71,13 @@ do
                     detectedUnitGroup and
                     seqContainsValue(self.detectedGroupsNames, detectedUnitGroup:getName())
                 ) then
-                    table.insert(detectedUnits, detectedUnit)
+                    if (self.minAngle ~= nil) then
+                        if (getRadarAngleToUnit(radarUnit, detectedUnit) >= self.minAngle) then
+                            table.insert(detectedUnits, detectedUnit)
+                        end
+                    else
+                        table.insert(detectedUnits, detectedUnit)
+                    end
                 end
             end
         end
@@ -79,12 +85,25 @@ do
         return detectedUnits
     end
 
+    local function debugRadarAngles(self, detectingUnit, units)
+        local angTexts = {}
+        for i = 1, #units do
+            local unit = units[i]
+            local ang = getRadarAngleToUnit(detectingUnit, unit)
+            if (ang) then
+                table.insert(angTexts, 'Ang from radar: '..detectingUnit:getName()..' to '..unit:getName()..' is:\n'..ang)
+            end
+        end
+        trigger.action.outText(table.concat(angTexts, '\n'), self.interval - 0.25);
+    end
+
     local function thePollFunction(self, cbForSingleDetectingUnit)
 
         for _, radarDetection in pairs(self.detectionTable) do
-            trigger.action.outText('Radar Detection for: '..radarDetection.name..'\n'..radarDetection:concat(), self.interval);
+            if radarDetection:length() > 0 then
+                trigger.action.outText('Radar Detection for: '..radarDetection.name..'\n'..radarDetection:concat(), self.interval - 0.25);
+            end
         end
-
 
         for i = 1, #self.detectingUnits do
             local continue = cbForSingleDetectingUnit(self.detectingUnits[i])
@@ -147,19 +166,11 @@ do
 
             -- TODO extract:
             local possibleDetectedUnits = self:getPossibleDetectedUnits()
-            local angTexts = {}
-            for i = 1, #possibleDetectedUnits do
-                local unit = possibleDetectedUnits[i]
-                local ang = getRadarAngleToUnit(detectingUnit, unit)
-                if (ang) then
-                    table.insert(angTexts, 'Ang from radar: '..detectingUnit:getName()..' to '..unit:getName()..' is:\n'..ang)
-                end
-            end
-            trigger.action.outText(table.concat(angTexts, '\n'), self.interval);
+
+            if (self.debug) then self:debugRadarAngles(detectingUnit, possibleDetectedUnits) end
 
             local unitsDetected = self:getAllUnitsRadarIsDetecting(detectingUnit)
 
-            -- local possibleDetectedUnits = self:getPossibleDetectedUnits()
             for i = 1, #possibleDetectedUnits do
                 local unit = possibleDetectedUnits[i]
                 if (
@@ -175,9 +186,8 @@ do
             end
 
             for i = 1, #unitsDetected do
-                local unit = unitsDetected[i]
-                self.detectionTable[detectingUnit:getName()]:add(unit:getName(), getRadarAngleToUnit(detectingUnit, unit))
-                local continue = cbForSingleDetectedUnit(unit, detectingUnit)
+                local detectedUnit = unitsDetected[i]
+                local continue = cbForSingleDetectedUnit(detectedUnit, detectingUnit)
                 if continue == false then return false end
             end
 
@@ -194,13 +204,22 @@ do
         self:addRadarPolling(function (detectedUnit, detectingUnit)
 
             -- A unit is detected!
-            
+
+            self.detectionTable[detectingUnit:getName()]:add(
+                detectedUnit:getName(),
+                '°'..string.sub(tostring(getRadarAngleToUnit(detectingUnit, detectedUnit)), 1, 8)..
+                ((detectedUnit:getPlayerName() and ' ('..detectedUnit:getPlayerName()..')') or ''),
+                true
+            )
+
             self.logger:info(
                 'Unit Radar detected! '..
                 detectedUnit:getTypeName()..' "'..detectedUnit:getName()..'"'..
+                ((detectedUnit:getPlayerName() and ' ('..detectedUnit:getPlayerName()..')') or '')..
                 (detectingUnit and (' by '..detectingUnit:getName()) or '')..
                 (self.flagNum and (' setting flag: '..self.flagNum..' to true.') or '')
             )
+
             if (not firstUnitDetected and self.flagNum) then trigger.action.setUserFlag(self.flagNum, true) end
             if (not firstUnitDetected and self.onBlame) then self.onBlame(detectedUnit, detectingUnit) end
             if (not self.countinous) then return false end -- false is for: stop the polling!
@@ -237,7 +256,7 @@ do
             local unit = Unit.getByName(detectingUnitsName)
             if (unit) then
                 table.insert(detectingUnits, unit)
-                detectionTable[detectingUnitsName] = Natils.createDictSet('Detection('..detectingUnitsName..')')
+                detectionTable[detectingUnitsName] = Natils.createDictSet(detectingUnitsName)
             end
         end
 
@@ -249,19 +268,32 @@ do
         if (not interval) then interval = #detectingUnits * 2 end
         if (interval < 2) then interval = 2 end
 
+        local minAngle = nil
+        if (
+            options and type(options) == 'table' and
+            type(options.minAngle) == 'number' and
+            options.minAngle >= -90 and
+            options.minAngle <= 90
+        ) then
+            minAngle = options.minAngle
+        end
+
         return {
             logger = mist.Logger:new("Radar Detection Sctipt (Nati)", "info"),
 
             -- props:
+            debug = (options and type(options) == 'table' and type(options.debug) == 'boolean') and options.debug or false,
             countinous = (options and type(options) == 'table' and type(options.countinous) == 'boolean') and options.countinous or false,
             flagNum = (options and type(options) == 'table' and type(options.flagNum) == 'number') and options.flagNum or nil,
             onBlame = (options and type(options) == 'table' and type(options.onBlame) == 'function') and options.onBlame or nil,
             interval = interval,
+            minAngle = minAngle,
             detectingUnits = detectingUnits,
             detectedGroupsNames = detectedGroupsNames,
             detectionTable = detectionTable,
 
             -- Methods:
+            debugRadarAngles = debugRadarAngles,
             getAllUnitsRadarIsDetecting = getAllUnitsRadarIsDetecting,
             getPossibleDetectedUnits = getPossibleDetectedUnits,
             addRadarPolling = addRadarPolling,
