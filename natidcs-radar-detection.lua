@@ -15,9 +15,13 @@ do
         for _ in pairs(T) do count = count + 1 end
         return count
     end
-    local function seqContainsValue(tbl, value)
+    local function seqContainsValue(tbl, value, map)
         for i = 1, #tbl do
-            if tbl[i] == value then return true end
+            if map and type(map) == 'function' then
+                if map(tbl[i]) == value then return true end
+            else
+                if tbl[i] == value then return true end
+            end
         end
         return false
     end
@@ -88,7 +92,7 @@ do
         end
     end
 
-    local function addPollingForUnits(self, cbForSingleDetectingUnit)
+    local function addPollingForDetectingUnits(self, cbForSingleDetectingUnit)
 
         local scheduledDetection
 
@@ -115,11 +119,11 @@ do
 
     end
 
-    local function addRadarDetectionPollingForUnits(self, func)
+    local function addRadarPolling(self, cbForSingleDetectedUnit)
 
         local deadUnits = {}
 
-        self:addPollingForUnits(function (detectingUnit)
+        self:addPollingForDetectingUnits(function (detectingUnit)
 
             if not detectingUnit then error('poll called on detecting unit that was never exists') end
 
@@ -142,10 +146,10 @@ do
             -- )
 
             -- TODO extract:
-            local allUnitsThatCanBeDetected = self:getPossibleDetectedUnits()
+            local possibleDetectedUnits = self:getPossibleDetectedUnits()
             local angTexts = {}
-            for i = 1, #allUnitsThatCanBeDetected do
-                local unit = allUnitsThatCanBeDetected[i]
+            for i = 1, #possibleDetectedUnits do
+                local unit = possibleDetectedUnits[i]
                 local ang = getRadarAngleToUnit(detectingUnit, unit)
                 if (ang) then
                     table.insert(angTexts, 'Ang from radar: '..detectingUnit:getName()..' to '..unit:getName()..' is:\n'..ang)
@@ -154,10 +158,26 @@ do
             trigger.action.outText(table.concat(angTexts, '\n'), self.interval);
 
             local unitsDetected = self:getAllUnitsRadarIsDetecting(detectingUnit)
+
+            -- local possibleDetectedUnits = self:getPossibleDetectedUnits()
+            for i = 1, #possibleDetectedUnits do
+                local unit = possibleDetectedUnits[i]
+                if (
+                    unit and
+                    not seqContainsValue(
+                        unitsDetected,
+                        unit:getName(),
+                        function (detectedUnit) return detectedUnit:getName() end
+                    )
+                ) then
+                    self.detectionTable[detectingUnit:getName()]:remove(unit:getName())
+                end
+            end
+
             for i = 1, #unitsDetected do
                 local unit = unitsDetected[i]
                 self.detectionTable[detectingUnit:getName()]:add(unit:getName(), getRadarAngleToUnit(detectingUnit, unit))
-                local continue = func(unit, detectingUnit)
+                local continue = cbForSingleDetectedUnit(unit, detectingUnit)
                 if continue == false then return false end
             end
 
@@ -165,22 +185,27 @@ do
 
     end
 
-    local function pollIsGroupsRadarDetectedBy(self)
+    local function start(self)
+
+        local firstUnitDetected = false;
 
         self.logger:info('Starting Detection polling in '..self.interval..'s for '..#self.detectingUnits..' detecting radar units')
 
-        self:addRadarDetectionPollingForUnits(function (detectedUnit, detectingUnit)
+        self:addRadarPolling(function (detectedUnit, detectingUnit)
 
             -- A unit is detected!
+            
             self.logger:info(
                 'Unit Radar detected! '..
                 detectedUnit:getTypeName()..' "'..detectedUnit:getName()..'"'..
                 (detectingUnit and (' by '..detectingUnit:getName()) or '')..
                 (self.flagNum and (' setting flag: '..self.flagNum..' to true.') or '')
             )
-            if (self.flagNum) then trigger.action.setUserFlag(self.flagNum, true) end
-            if (self.onBlame) then self.onBlame(detectedUnit, detectingUnit) end
+            if (not firstUnitDetected and self.flagNum) then trigger.action.setUserFlag(self.flagNum, true) end
+            if (not firstUnitDetected and self.onBlame) then self.onBlame(detectedUnit, detectingUnit) end
             if (not self.countinous) then return false end -- false is for: stop the polling!
+
+            firstUnitDetected = true
 
         end, self.interval)
 
@@ -239,11 +264,11 @@ do
             -- Methods:
             getAllUnitsRadarIsDetecting = getAllUnitsRadarIsDetecting,
             getPossibleDetectedUnits = getPossibleDetectedUnits,
-            addRadarDetectionPollingForUnits = addRadarDetectionPollingForUnits,
-            addPollingForUnits = addPollingForUnits,
+            addRadarPolling = addRadarPolling,
+            addPollingForDetectingUnits = addPollingForDetectingUnits,
             thePollFunction = thePollFunction,
 
-            start = pollIsGroupsRadarDetectedBy
+            start = start
         }
     end
 
