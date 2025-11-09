@@ -43,6 +43,9 @@ do
             get = function(self, key)
                 return self.dict[key]
             end,
+            remove = function(self, key)
+                if includesKey(self.dict, key) then self.dict[key] = nil end
+            end,
             length = function(self)
                 return countKeysInTable(self.dict)
             end,
@@ -77,11 +80,13 @@ end
 -- print(set1:has('a'));
 -- set1:add('a', 'moshiko')
 -- set1:add('b', 'tamam')
+
+-- set1:remove('b')
 -- set1:add('b', 'keif')
 -- print(set1:has('a'));
 
 -- print(set1:get('b'));
 -- print(set1:get('c'));
--- print('\n'..set1.name..' set now is:\n'..set1:concat())
+-- print('\n'..set1.name..' set now is:\n'..set1:concat()..'\nlength: '..set1:length())
 
 -- print(#{ 'goo', 'bar', 'loor' })
