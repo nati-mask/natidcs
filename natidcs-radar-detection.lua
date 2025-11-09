@@ -50,8 +50,17 @@ do
         end
     end
 
-    local function getAllUnitsRadarIsDetecting(self, radarUnit)
-        local controller = radarUnit:getController()
+    local function getAllUnitsRadarIsDetecting(self, detectingUnit)
+
+        if (
+            not detectingUnit or
+            not detectingUnit:isActive() or
+            not detectingUnit:isExist()
+        ) then
+            return {}, true
+        end
+
+        local controller = detectingUnit:getController()
         if (not controller) then error('There is no DCS controller for Radar Unit') end
 
         local detections = controller:getDetectedTargets(Controller.Detection.RADAR)
@@ -72,7 +81,7 @@ do
                     seqContainsValue(self.detectedGroupsNames, detectedUnitGroup:getName())
                 ) then
                     if (self.minAngle ~= nil) then
-                        if (getRadarAngleToUnit(radarUnit, detectedUnit) >= self.minAngle) then
+                        if (getRadarAngleToUnit(detectingUnit, detectedUnit) >= self.minAngle) then
                             table.insert(detectedUnits, detectedUnit)
                         end
                     else
@@ -82,10 +91,11 @@ do
             end
         end
 
-        return detectedUnits
+        return detectedUnits, false
     end
 
     local function debugRadarAngles(self, detectingUnit, units)
+        if (not detectingUnit) then return end
         local angTexts = {}
         for i = 1, #units do
             local unit = units[i]
@@ -146,16 +156,8 @@ do
 
             if not detectingUnit then error('poll called on detecting unit that was never exists') end
 
-            if (tableLength(deadUnits) == #self.detectingUnits) then
+            if (tableLength(deadUnits) >= #self.detectingUnits) then
                 return false -- stop the polling
-            end
-
-            if (
-                not detectingUnit:isActive() or
-                not detectingUnit:isExist()
-            ) then
-                deadUnits[detectingUnit:getName()] = true -- "Set" like
-                return
             end
 
             -- trigger.action.outText(
@@ -164,12 +166,15 @@ do
             --     ' is detecting, radar enum: '..Controller.Detection.RADAR, 10
             -- )
 
-            -- TODO extract:
+            local unitsDetected, radarIsDead = self:getAllUnitsRadarIsDetecting(detectingUnit)
+
+            if radarIsDead then
+                deadUnits[detectingUnit:getName()] = true -- "Set" like
+            end
+
             local possibleDetectedUnits = self:getPossibleDetectedUnits()
 
             if (self.debug) then self:debugRadarAngles(detectingUnit, possibleDetectedUnits) end
-
-            local unitsDetected = self:getAllUnitsRadarIsDetecting(detectingUnit)
 
             for i = 1, #possibleDetectedUnits do
                 local unit = possibleDetectedUnits[i]
@@ -212,13 +217,15 @@ do
                 true
             )
 
-            self.logger:info(
-                'Unit Radar detected! '..
-                detectedUnit:getTypeName()..' "'..detectedUnit:getName()..'"'..
-                ((detectedUnit:getPlayerName() and ' ('..detectedUnit:getPlayerName()..')') or '')..
-                (detectingUnit and (' by '..detectingUnit:getName()) or '')..
-                (self.flagNum and (' setting flag: '..self.flagNum..' to true.') or '')
-            )
+            if (not self.countinous) then
+                self.logger:info(
+                    'Unit Radar detected! '..
+                    detectedUnit:getTypeName()..' "'..detectedUnit:getName()..'"'..
+                    ((detectedUnit:getPlayerName() and ' ('..detectedUnit:getPlayerName()..')') or '')..
+                    (detectingUnit and (' by '..detectingUnit:getName()) or '')..
+                    (self.flagNum and (' setting flag: '..self.flagNum..' to true.') or '')
+                )
+            end
 
             if (not firstUnitDetected and self.flagNum) then trigger.action.setUserFlag(self.flagNum, true) end
             if (not firstUnitDetected and self.onBlame) then self.onBlame(detectedUnit, detectingUnit) end
