@@ -217,17 +217,19 @@ do
                 true
             )
 
+            local needToSetFlag = (not firstUnitDetected and self.flagNum);
+
             if (not self.countinous) then
                 self.logger:info(
                     'Unit Radar detected! '..
                     detectedUnit:getTypeName()..' "'..detectedUnit:getName()..'"'..
                     ((detectedUnit:getPlayerName() and ' ('..detectedUnit:getPlayerName()..')') or '')..
                     (detectingUnit and (' by '..detectingUnit:getName()) or '')..
-                    (self.flagNum and (' setting flag: '..self.flagNum..' to true.') or '')
+                    (needToSetFlag and (' setting flag: '..self.flagNum..' to true.') or '')
                 )
             end
 
-            if (not firstUnitDetected and self.flagNum) then trigger.action.setUserFlag(self.flagNum, true) end
+            if (needToSetFlag) then trigger.action.setUserFlag(self.flagNum, true) end
             if (not firstUnitDetected and self.onBlame) then self.onBlame(detectedUnit, detectingUnit) end
             if (not self.countinous) then return false end -- false is for: stop the polling!
 
