@@ -83,7 +83,21 @@ do
         return mist.utils.toDegree(angRad)
     end
 
+    local function getUnitsInGroups(groupNames)
+        if not type(groupNames) == 'table' then error('groupNames are not a table') end
+        local units = {}
+        local unitsSolver = {}
+        for i = 1, #groupNames do table.insert(unitsSolver, '[g]'..groupNames[i]) end
+        local possibleDetectedUnits = mist.makeUnitTable(unitsSolver)
+        for i = 1, #possibleDetectedUnits do
+            local unit = Unit.getByName(possibleDetectedUnits[i])
+            if (unit) then table.insert(units, unit) end
+        end
+        return units
+    end
 
+
+    NatiMist.getUnitsInGroups = getUnitsInGroups
     NatiMist.getUnitsInZones = getUnitsInZones
     NatiMist.degAngleBetweenPoints = degAngleBetweenPoints
 
