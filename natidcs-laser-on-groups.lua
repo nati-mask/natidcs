@@ -17,6 +17,8 @@ do
     local function deadUnitsListener(event)
         if
             (
+                event.id == world.event.S_EVENT_DEAD
+                or
                 event.id == world.event.S_EVENT_UNIT_LOST
                 or
                 event.id == world.event.S_EVENT_CRASH
