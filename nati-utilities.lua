@@ -5,6 +5,11 @@ Natils = Natils or {}
 
 do
 
+    local getUnitUniqueId = function(unit)
+        if (not unit) or not (unit.id_) then error('Cannot uniquely identify unit') end
+        return tostring(unit.id_)
+    end
+
     local includesVal = function (t, val)
         for _, tVal in pairs(t) do
             if val == tVal then return true end
@@ -68,6 +73,7 @@ do
         return includesVal(t, val)
     end
 
+    Natils.getUnitUniqueId = getUnitUniqueId
 
 end
 
