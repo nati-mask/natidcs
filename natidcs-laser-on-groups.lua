@@ -106,13 +106,20 @@ do
 
         local laserData = self:getLaserData()
 
-        if not laserData.lasingUnitId or laserData.lasingUnitId ~= Natils.getUnitUniqueId(lasingUnit) then
+        if
+            (
+                not laserData.lasingUnitId
+                or not laserData.lasedUnitId
+                or (laserData.lasedUnitId ~= Natils.getUnitUniqueId(lasedUnit))
+                or (laserData.lasingUnitId ~= Natils.getUnitUniqueId(lasingUnit))
+            )
+        then
             if laserData.laser then
                 laserData.laser:destroy()
             end
             local laserSpot = Spot.createLaser(lasingUnit, nil, lasedUnit, self:getLaserCode())
-            self:setLaserData(lasingUnit, laserSpot)
             trigger.action.outText('JTAC "'..lasingUnit:getName()..'" is lasing on "'..lasedUnit:getName()..'"', 20)
+            self:setLaserData(lasingUnit, lasedUnit, laserSpot)
         end
 
     end
@@ -138,7 +145,11 @@ do
     end
 
     local function laserOnGroupConstructor(lasingGroupName, lasedGroupName, laserCode, options)
-        local laserData = { lasingUnitId = nil, laser = nil }
+        local laserData = { lasingUnitId = nil, lasedUnitId = nil, laser = nil }
+
+        if type(laserCode) ~= 'number' or laserCode < 0 then
+            error('laserCode must be a non-negative number, got: ' .. tostring(laserCode))
+        end
 
         local lasedUnits = getLivingUnits({ lasedGroupName });
         if not lasedUnits or #lasedUnits == 0 then
@@ -153,8 +164,9 @@ do
         return {
             lasingUnits = lasingUnits,
             lasedUnits = lasedUnits,
-            setLaserData = function(lasingUnit, newSpotLaser)
+            setLaserData = function(self, lasingUnit, lasedUnit, newSpotLaser)
                 laserData.lasingUnitId = Natils.getUnitUniqueId(lasingUnit)
+                laserData.lasedUnitId = Natils.getUnitUniqueId(lasedUnit)
                 laserData.laser = newSpotLaser
             end,
             getLaserData = function() return laserData end,
