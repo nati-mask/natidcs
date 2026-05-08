@@ -77,16 +77,12 @@ do
             (
                 event.initiator
                 and
+                event.initiator.getCategory
+                and
                 event.initiator:getCategory() == Object.Category.UNIT
             )
         then
-            local success, result = pcall(function()
-                return self:onDeadUnit(event.initiator)
-            end)
-
-            if not success then
-                trigger.action.outText('Error in unit dead event handler:\n'..result, 120)
-            end
+            self:onDeadUnit(event.initiator)
         end
     end
 
@@ -117,8 +113,17 @@ do
             if laserData.laser then
                 laserData.laser:destroy()
             end
-            local laserSpot = Spot.createLaser(lasingUnit, nil, lasedUnit, self:getLaserCode())
-            trigger.action.outText('JTAC "'..lasingUnit:getName()..'" is lasing on "'..lasedUnit:getName()..'"', 20)
+            local laserCode = self:getLaserCode()
+
+            -- Yes the source is a Unit, the target is a Point.
+            local laserSpot = Spot.createLaser(lasingUnit, {x = 0, y = 1, z = 0}, lasedUnit:getPoint(), laserCode)
+
+            trigger.action.outText(
+                'JTAC "'..lasingUnit:getName()
+                ..'" is lasing on "'..lasedUnit:getName()
+                ..'" with laser code: '..tostring(laserCode)
+                ..' with adjustments.'
+            , 30)
             self:setLaserData(lasingUnit, lasedUnit, laserSpot)
         end
 
@@ -141,7 +146,16 @@ do
 
     local function start(self)
         self:manageLaserDesignation()
-        self.eventHandlerId = mist.addEventHandler(function (event) self:deadUnitsListener(event) end)
+
+        self.eventHandlerId = mist.addEventHandler(function (event)
+            local success, result = pcall(function()
+                return self:deadUnitsListener(event)
+            end)
+
+            if not success then
+                trigger.action.outText('Error in unit dead event handler:\n'..tostring(result), 120)
+            end
+        end)
     end
 
     local function laserOnGroupConstructor(lasingGroupName, lasedGroupName, laserCode, options)
@@ -203,7 +217,7 @@ do
 
         if not success then
             -- Here "laserOnGroup" is the error
-            trigger.action.outText('Error in Laser on groups Script:\n'..laserOnGroup, 120)
+            trigger.action.outText('Error in Laser on groups Script:\n'..tostring(laserOnGroup), 120)
         else
             return laserOnGroup -- the instance
         end
